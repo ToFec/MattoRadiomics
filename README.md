@@ -1,5 +1,5 @@
 # MattoRadiomics
-radiomic feature elimination, clustering and model building
+radiomic feature elimination, clustering, model building and analysis
 
 This repository contains code to analyze radiomic features extracted from MRI and PET data during the MATTO project. The provided code allows the user to build a fully automated feature processing, model building, and evaluation pipeline, and provides the following features:
 - Analyze radiomic features
