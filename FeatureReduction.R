@@ -412,6 +412,30 @@ GroupComparisonTest <- R6Class("GroupComparisonTest",
         }
     ),
     private = list(
+        inspectClassWiseDistributions = function(classVariable, data, op = "<") {
+          unicqueClassVals = unique(classVariable)
+          classCombinations <- combn(length(unicqueClassVals),2)
+          pValues <- c()
+          for (featIdx in seq_len(ncol(data))) {
+            currentFeature <- data[, featIdx]
+            testToCall <- self$wilcoxTest
+            if (!is.numeric(currentFeature)) {
+              testToCall <- self$chisqTest
+            }
+            currpValues <- c()
+            for (classComboIdx in 1:ncol(classCombinations)) {
+              classCombo = unicqueClassVals[classCombinations[,classComboIdx]]
+              currentFeature1 <- currentFeature[classVariable == classCombo[1]]
+              currentFeature2 <- currentFeature[classVariable == classCombo[2]]
+              currpValues <- append(currpValues, testToCall(currentFeature1, currentFeature2))
+            }
+            pValues <- append(pValues, mean(currpValues))
+          }
+          comFun <- match.fun(op)
+          data <- data[, comFun(pValues, private$pValueThreshold), drop = FALSE]
+          private$namesOfColsToKeep <- colnames(data)
+          return(data)
+        },
         pValueThreshold = NULL,
         namesOfColsToKeep = NULL
     )
@@ -421,29 +445,26 @@ InspectClassWiseDistribution <- R6Class("InspectClassWiseDistribution",
   inherit = GroupComparisonTest,
   public = list(
       apply = function(outcome, data) {
-        status = unique(outcome$status)
-        statusCombinations <- combn(length(status),2)
-        pValues <- c()
-        for (featIdx in seq_len(ncol(data))) {
-          currentFeature <- data[, featIdx]
-          testToCall <- super$wilcoxTest
-          if (!is.numeric(currentFeature)) {
-            testToCall <- super$chisqTest
-          }
-          currpValues <- c()
-          for (statusComboIdx in 1:ncol(statusCombinations)) {
-            statusCombo = status[statusCombinations[,statusComboIdx]]
-            currentFeature1 <- currentFeature[outcome$status == statusCombo[1]]
-            currentFeature2 <- currentFeature[outcome$status == statusCombo[2]]
-            currpValues <- append(currpValues, testToCall(currentFeature1, currentFeature2))
-          }
-          pValues <- append(pValues, mean(currpValues))
-        }
-        data <- data[, pValues < private$pValueThreshold, drop = FALSE]
-        private$namesOfColsToKeep <- colnames(data)
-        return(data)
+        private$inspectClassWiseDistributions(outcome$status, data)
       }
   )
+)
+
+InspectMetaVarDistribution <- R6Class("InspectMetaVarDistribution",
+    inherit = GroupComparisonTest,
+    public = list(
+        initialize = function(metaVarName, pValueThreshold = 0.05) {
+          private$pValueThreshold = pValueThreshold
+          private$metaVarName = metaVarName
+        },
+        apply = function(outcome, data) {
+          metaVar <- outcome$getMetaVariable(private$metaVarName)
+          private$inspectClassWiseDistributions(metaVar, data, ">")
+        }
+    ),
+    private = list(
+        metaVarName = NULL
+    )
 )
 
 CenterAgnosticFeatures <- R6Class("CenterAgnosticFeatures",

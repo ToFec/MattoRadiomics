@@ -10,6 +10,7 @@ Outcome <- R6Class("Outcome", list(
         time = NULL,
         ids = NULL,
         center = NULL,
+        metas = list(),
         initialize = function(status, ids=NULL, time = NULL, center = NULL) {
           self$status <- status
           self$time <- time
@@ -18,7 +19,17 @@ Outcome <- R6Class("Outcome", list(
         },
         getAsList = function()
         {
-          list("ids"=self$ids,"status"=self$status,"time"=self$time, "center" = self$center)
+          list("ids"=self$ids,"status"=self$status,"time"=self$time, "center" = self$center, "metas" = self$metas)
+        },
+        addMetaVariable = function(name, data) {
+          self$metas[[name]]  <- data
+        },
+        getMetaVariable = function(name) {
+          if (name %in% names(self$metas)) {
+            return(self$metas[[name]])
+          } else {
+            return(list())
+          }
         },
         getSubSet = function(idxs)
         {
@@ -38,6 +49,10 @@ Outcome <- R6Class("Outcome", list(
           {
             center = self$center[idxs]
           }
-          Outcome$new(status, ids, time, center)
+          outcomeNew <- Outcome$new(status, ids, time, center)
+          for (metaName in names(self$metas)) {
+            outcomeNew$addMetaVariable(metaName, self$metas[[metaName]][idxs])
+          }
+          return(outcomeNew)
         }
     ))

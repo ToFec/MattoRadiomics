@@ -478,3 +478,76 @@ LModel <- R6Class(
         }
     )
 )
+
+PolyLModel <- R6Class(
+    "PolyLModel",
+    inherit = Model,
+    public = list(
+        initialize = function(degree = 3) {
+          super$initialize()
+          private$degree = degree
+        },
+        evaluate = function(data) {
+          prediction <- predict(private$model, data)
+          rmse <- sqrt(mean((data$time - prediction)^2))
+        },
+        setDegree = function(degree) {
+          private$degree = degree
+        },
+        getDegree = function(degree) {
+          private$degree
+        },
+        comparePerformanceValues = function(perfValue1, perfValue2) {
+          #returns TRUE if first value is better, otherwise FALSE
+          if (perfValue1 < perfValue2) {
+            return(TRUE)
+          }
+          return(FALSE)
+        },
+        trainModel = function(trainData) {
+          private$model <- lm(as.formula(self$getFormulaString()), data = trainData)
+        },
+        setFormulaBase = function() {
+          private$formulaBase <- "time"
+        },
+        bindData = function(outcome, features) {
+          return(data.frame(
+                  cbind(
+                      "time" = outcome$time,
+                      features
+                  )
+              ))
+        },
+        getFormulaString = function () {
+          fields <- paste0("poly(", private$formulaFields, ",", private$degree, ")", collapse = "+")
+          paste(private$formulaBase, "~", fields)
+        }
+    ),
+    private = list(
+        degree = NULL
+    )
+)
+
+PolyGLModel <- R6Class(
+    "PolyGLModel",
+    inherit = Model,
+    public = list(
+        initialize = function(degree = 3) {
+          super$initialize()
+          private$degree = degree
+        },
+        setDegree = function(degree) {
+          private$degree = degree
+        },
+        getDegree = function(degree) {
+          private$degree
+        },
+        getFormulaString = function () {
+          fields <- paste0("poly(", private$formulaFields, ",", private$degree, ")", collapse = "+")
+          paste(private$formulaBase, "~", fields)
+        }
+    ),
+    private = list(
+        degree = NULL
+    )
+)

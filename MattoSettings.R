@@ -9,9 +9,9 @@ library(R6)
 MattoSettingsGlm <- R6Class("MattoSettingsGlm", 
     public = list(
       outerStartFold = 1,
-      outerEndFold = 5,
+      outerEndFold = 30,
       innerStartFold = 1,
-      innerEndFold = 5,
+      innerEndFold = 30,
       maxFeaturesInmodel = 8,#with eight features and no outer loop and a train/test split of 80/20, we have around 15 samples per feature
       baseModel = NULL,
       ensembleBaseModel = NULL,
@@ -20,7 +20,7 @@ MattoSettingsGlm <- R6Class("MattoSettingsGlm",
       featureSetParserMapping = NULL,
       csvParser = NULL,
       featureSets = NULL,
-      featureDeterminationMethod = "takeNFeatures",#"exhaustive",#"recursive"
+      featureDeterminationMethod = "recursive",#"takeNFeatures",#"exhaustive",
       volumeColName = "original_shape_MeshVolume",
       featureReductionContainerProvider = NULL,
       initialize = function(csvParser = NULL) {
