@@ -9,13 +9,14 @@ library(doParallel)
 
 ModelTrainer <- R6Class("ModelTrainer",
   public = list(
-    initialize = function(model, trainingOutcome, trainingData, validationOutcome, validationData, maxFeaturesInmodel, featureSearchMethod = "exhaustive") {
+    initialize = function(model, trainingOutcome, trainingData, validationOutcome, validationData, maxFeaturesInmodel, featureSearchMethod = "exhaustive", modelParamPThreshold = 0.05) {
       private$model <- model
       private$trainingOutcome <- trainingOutcome
       private$trainingData <- trainingData
       private$validationOutcome <- validationOutcome
       private$validationData <- validationData
       private$maxFeaturesInmodel <- maxFeaturesInmodel
+      private$modelParamPThreshold <- modelParamPThreshold
       if (featureSearchMethod == "exhaustive") {
         private$featureDeterminationMethod <- private$findBestFeatureCombinationExhaustiveParallel
       } else if (featureSearchMethod == "takeNFeatures") {
@@ -45,6 +46,7 @@ ModelTrainer <- R6Class("ModelTrainer",
     trainingData = NULL,
     validationOutcome = NULL,
     validationData = NULL,
+    modelParamPThreshold = NULL,
     maxFeaturesInmodel = NULL,
     featureDeterminationMethod = NULL,
     takeNFeatures = function(perFormanceToBeat, dataFrameForModelFitting) {
@@ -87,7 +89,7 @@ ModelTrainer <- R6Class("ModelTrainer",
 
         
 
-        if (!is.na(maxCoefsPvalue) & maxCoefsPvalue <= 0.1) {
+        if (!is.na(maxCoefsPvalue) & maxCoefsPvalue <= private$modelParamPThreshold) {
           validationSetPerformance <- private$model$evaluate(private$model$bindData(private$validationOutcome, private$validationData))
           trainSetPerformance <- private$model$evaluate(dataFrameForModelFitting)
 
@@ -139,7 +141,7 @@ ModelTrainer <- R6Class("ModelTrainer",
             }
           )          
           
-          if (!is.na(maxCoefsPvalue) & maxCoefsPvalue <= 0.05) {
+          if (!is.na(maxCoefsPvalue) & maxCoefsPvalue <= private$modelParamPThreshold) {
             validationSetPerformance <- private$model$evaluate(private$model$bindData(private$validationOutcome, private$validationData))
             trainSetPerformance <- private$model$evaluate(dataFrameForModelFitting)
             
@@ -192,7 +194,7 @@ ModelTrainer <- R6Class("ModelTrainer",
           
           maxCoefsPvalue <- max(model$getPValuesOfFittedModel())
           
-          if (!is.na(maxCoefsPvalue) & maxCoefsPvalue <= 0.05) {
+          if (!is.na(maxCoefsPvalue) & maxCoefsPvalue <= private$modelParamPThreshold) {
             validationSetPerformance <- model$evaluate(model$bindData(currValidationOutcome, currValidationData))
             trainSetPerformance <- model$evaluate(dataFrameForModelFitting)
             

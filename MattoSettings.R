@@ -11,7 +11,7 @@ MattoSettingsGlm <- R6Class("MattoSettingsGlm",
       outerStartFold = 1,
       outerEndFold = 30,
       innerStartFold = 1,
-      innerEndFold = 30,
+      innerEndFold = 1,
       maxFeaturesInmodel = 8,#with eight features and no outer loop and a train/test split of 80/20, we have around 15 samples per feature
       baseModel = NULL,
       ensembleBaseModel = NULL,
@@ -21,6 +21,8 @@ MattoSettingsGlm <- R6Class("MattoSettingsGlm",
       csvParser = NULL,
       featureSets = NULL,
       featureDeterminationMethod = "recursive",#"takeNFeatures",#"exhaustive",
+      modelParamPThreshold = 0.1, # for polynomial model set this to 1.0 (all models pass). the algo checks each model param and if one param is above threshold the model gets rejected.
+      # with a polynomial model alll degrees <= the given degree are part of the model and if one is not significant the model would get rejected
       volumeColName = "original_shape_MeshVolume",
       featureReductionContainerProvider = NULL,
       initialize = function(csvParser = NULL) {
@@ -74,6 +76,21 @@ MattoSettingsGlm <- R6Class("MattoSettingsGlm",
         }
     ),
     private = list(
+    )
+)
+
+MattoSettingsPolyGLM <- R6Class(
+    "MattoSettingsPolyGLM",
+    inherit = MattoSettingsGlm,
+    public = list(
+        initialize = function(csvParser = NULL) {
+          super$initialize(csvParser)
+          self$modelParamPThreshold = 1.0 # for polynomial model set this to 1.0 (all models pass). the algo checks each model param and if one param is above threshold the model gets rejected.
+          # with a polynomial model alll degrees <= the given degree are part of the model and if one is not significant the model would get rejected
+          self$baseModel <- PolyGLModel$new()
+          self$ensembleBaseModel <- GlmEnsembleModel$new()
+          self$featureSetsAndReductionRules = list("radiomics" = self$featureReductionContainerProvider$radiomicsFeatureEliminationRulesMattoPolyGlm)
+        }
     )
 )
 

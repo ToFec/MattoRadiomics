@@ -228,7 +228,7 @@ UnivariateFeatureReductionRuleCox <- R6Class("UnivariateFeatureReductionRuleCox"
   )
 )
 
-UnivariateFeatureReductionRuleGlm <- R6Class("UnivariateFeatureReductionRuleGlm",
+GeneralUnivariateFeatureReductionRule <- R6Class("UnivariateFeatureReductionRuleGlm",
     inherit = FeatureReductionRule,
     public = list(
         pValueThreshold = NULL,
@@ -237,7 +237,7 @@ UnivariateFeatureReductionRuleGlm <- R6Class("UnivariateFeatureReductionRuleGlm"
           self$pValueThreshold <- pValueThreshold
           self$adjustP <- adjustP
         },
-        apply = function(outcome, data) {
+        apply = function(outcome, data, innerCode) {
           featuresToTake <- rep(100, ncol(data))
           
           for (featIdx in seq_len(ncol(data))) {
@@ -288,63 +288,91 @@ UnivariateFeatureReductionRuleGlm <- R6Class("UnivariateFeatureReductionRuleGlm"
     )
 )
 
-UnivariateFeatureReductionRuleLM <- R6Class("UnivariateFeatureReductionRuleLM",
-    inherit = FeatureReductionRule,
+UnivariateFeatureReductionRuleGlm <- R6Class("UnivariateFeatureReductionRuleGlm",
+    inherit = GeneralUnivariateFeatureReductionRule,
     public = list(
-        pValueThreshold = NULL,
-        adjustP = NULL,
-        initialize = function(pValueThreshold = 0.05, adjustP = FALSE) {
-          self$pValueThreshold <- pValueThreshold
-          self$adjustP <- adjustP
+        innerLoopLogic = function(outcome, data) {
+          pValue <- tryCatch(
+              {
+                model <- glm(outcome$status ~ data[, featIdx], family = binomial())
+                modelSummaryCoefs <- coef(summary(model))
+                modelSummaryCoefs[2, 4]
+              },
+              error=function(e) {
+                return(1.0)
+              })
+          return(pValue)
         },
         apply = function(outcome, data) {
-          featuresToTake <- rep(100, ncol(data))
-          
-          for (featIdx in seq_len(ncol(data))) {
-            hasZeroVariance <- nearZeroVar(data[, featIdx], saveMetrics = TRUE)
-            if (!hasZeroVariance$zeroVar && !hasZeroVariance$nzv) {
-              
-              pValue <- tryCatch(
-                  {
-                    model <- lm(outcome$time ~ data[, featIdx])
-                    modelSummaryCoefs <- coef(summary(model))
-                    modelSummaryCoefs[2, 4]
-                  },
-                  error=function(e) {
-                    return(1.0)
-                  })  
-              featuresToTake[featIdx] <- pValue
-            }
-          }
-          
-          featuresToTake[is.na(featuresToTake)] <- 1.0
-          
-          data <- data[, featuresToTake < 1, drop = FALSE]
-          featuresToTake <- featuresToTake[featuresToTake < 1, drop = FALSE]
-          
-          if (self$adjustP) {
-            pAdjust <- p.adjust(featuresToTake, "holm")
-          } else {
-            pAdjust <- featuresToTake
-          }
-          
-          data <- data[, pAdjust < self$pValueThreshold, drop = FALSE]
-          private$calculatedFeatures <- data.frame(t(pAdjust[pAdjust < self$pValueThreshold]))
-          colnames(private$calculatedFeatures) <- colnames(data)
-          private$namesOfColsToKeep <- colnames(data)
-          print(paste("after univariate filtering:",length(data)))
-          return(data)
-        },
-        applyToTestSet = function(outcome, newData) {
-          return(newData[private$namesOfColsToKeep])
-        },
-        getCalculatedFeatures = function() {
-          return(private$calculatedFeatures)
+          data <- super$apply(outcome, data, self$innerLoopLogic)
+          return(data)          
         }
-    ),
-    private = list(
-        namesOfColsToKeep = NULL,
-        calculatedFeatures = NULL
+    )
+)
+
+UnivariateFeatureReductionRulePolyGlm <- R6Class("UnivariateFeatureReductionRulePolyGlm",
+    inherit = GeneralUnivariateFeatureReductionRule,
+    public = list(
+        innerLoopLogic = function(outcome, data) {
+          pValue <- tryCatch(
+              {
+                model <- glm(outcome$status ~ poly(data[, featIdx],3), family = binomial())
+                modelSummaryCoefs <- coef(summary(model))
+                min(modelSummaryCoefs[2:4, 4])
+              },
+              error=function(e) {
+                return(1.0)
+              })
+          return(pValue)
+        },
+        apply = function(outcome, data) {
+          data <- super$apply(outcome, data, self$innerLoopLogic)
+          return(data)          
+        }
+    )
+)
+
+UnivariateFeatureReductionRulePolyLM <- R6Class("UnivariateFeatureReductionRulePolyLM",
+    inherit = GeneralUnivariateFeatureReductionRule,
+    public = list(
+        innerLoopLogic = function(outcome, data) {
+          pValue <- tryCatch(
+              {
+                model <- lm(outcome$time ~ poly(data[, featIdx],3))
+                modelSummaryCoefs <- coef(summary(model))
+                min(modelSummaryCoefs[2:4, 4])
+              },
+              error=function(e) {
+                return(1.0)
+              })
+          return(pValue)
+        },
+        apply = function(outcome, data) {
+          data <- super$apply(outcome, data, self$innerLoopLogic)
+          return(data)
+        }
+    )
+)
+
+UnivariateFeatureReductionRuleLM <- R6Class("UnivariateFeatureReductionRuleLM",
+    inherit = GeneralUnivariateFeatureReductionRule,
+    public = list(
+        innerLoopLogic = function(outcome, data) {
+          pValue <- tryCatch(
+              {
+                model <- lm(outcome$time ~ data[, featIdx])
+                modelSummaryCoefs <- coef(summary(model))
+                modelSummaryCoefs[2, 4]
+              },
+              error=function(e) {
+                return(1.0)
+              })
+          return(pValue)
+        },
+        apply = function(outcome, data) {
+          data <- super$apply(outcome, data, self$innerLoopLogic)
+          return(data)          
+        }
     )
 )
 

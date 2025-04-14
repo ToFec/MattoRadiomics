@@ -133,7 +133,7 @@ modelSelectionInnerLoop <- function(outcome, settings, trainSets) {
     ## variableTracker$trackVariableWithName(processedTrainData, currprocessedTrainDataName)
     if (length(processedTrainData) > 0) {
       model <- settings$baseModel$clone(deep = TRUE)
-      trainer <- ModelTrainer$new(model, trainTestSetOutcome$trainSet, processedTrainData, trainTestSetOutcome$testSet, processedTestData, settings$maxFeaturesInmodel, settings$featureDeterminationMethod)
+      trainer <- ModelTrainer$new(model, trainTestSetOutcome$trainSet, processedTrainData, trainTestSetOutcome$testSet, processedTestData, settings$maxFeaturesInmodel, settings$featureDeterminationMethod, settings$modelParamPThreshold)
       trainer$findBestFeatureCombination()
       if (model$getNumberOfFields() > 0) {
         model$setFeatureReductionContainers(featReduction)

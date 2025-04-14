@@ -59,7 +59,7 @@ mattoNestedCrossValidation = function(settings) {
   
   dataForCorrelation <- featureSets[["radiomics"]][[1]]
   
-  rhos <- abs(cor(dataForCorrelation, method = "spearman"))
+  rhos <- abs(cor(dataForCorrelation, method = "pearson"))
   rhos[is.na(rhos)] = 0.0
   settings$featureReductionContainerProvider$setPrecalulatedFeatures("ClusterFeaturesWithPreComputedFeature", rhos)
   

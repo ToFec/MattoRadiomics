@@ -12,6 +12,25 @@ FeatureReductionContainerProvider <- R6Class("FeatureReductionContainerProvider"
         setPrecalulatedFeatures = function(ruleName, features) {
           self$preCalulcatedFeatures[ruleName] <- list(features)
         },
+        radiomicsFeatureEliminationRulesMattoPolyLM = function(outcomeTrainSet, radiomicFeaturesTrainSets) {
+          ## define Rules to apply
+          normalizer <- NormalizeFeaturesrule$new()
+          keepFeaturesNoVolumeCorrelation <- RemoveFeaturesThatCorrelateWithVolume$new()
+          keepFeaturesNoVolumeCorrelation$setVolumeColName(self$volumeColName)
+          univariateFeatureReduction <- UnivariateFeatureReductionRulePolyLM$new()
+          clusterAnalysis <- ClusterFeaturesWithPreComputedFeature$new()
+          clusterAnalysis$setPrecomputedFeaturesProvider(univariateFeatureReduction$getCalculatedFeatures)
+          clusterAnalysis$setPrecomputedCorrelations(self$preCalulcatedFeatures["ClusterFeaturesWithPreComputedFeature"][[1]])
+          
+          featReductionContainer <- FeatureReductionContainer$new(outcomeTrainSet, radiomicFeaturesTrainSets[[1]])
+          featReductionContainer$addRule(normalizer, "NormalizeFeaturesrule")
+          featReductionContainer$addRule(keepFeaturesNoVolumeCorrelation, "RemoveFeaturesThatCorrelateWithVolume")
+          featReductionContainer$addRule(univariateFeatureReduction,"UnivariateFeatureReductionRulePolyLM")
+          featReductionContainer$addRule(clusterAnalysis, "ClusterFeaturesWithPreComputedFeature")
+          
+          return(featReductionContainer)
+          
+        },
         radiomicsFeatureEliminationRulesMattoLM = function(outcomeTrainSet, radiomicFeaturesTrainSets) {
           ## define Rules to apply
           normalizer <- NormalizeFeaturesrule$new()
@@ -77,7 +96,30 @@ FeatureReductionContainerProvider <- R6Class("FeatureReductionContainerProvider"
           featReductionContainer$addRule(sortFeaturesWithPreComputedFeature, "SortFeaturesWithPreComputedFeature")
           return(featReductionContainer)
           
-        },        
+        },
+        radiomicsFeatureEliminationRulesMattoPolyGlm = function(outcomeTrainSet, radiomicFeaturesTrainSets) {
+          ## define Rules to apply
+          normalizer <- NormalizeFeaturesrule$new()
+          keepFeaturesNoVolumeCorrelation <- RemoveFeaturesThatCorrelateWithVolume$new()
+          keepFeaturesNoVolumeCorrelation$setVolumeColName(self$volumeColName)
+          univariateFeatureReduction <- UnivariateFeatureReductionRulePolyGlm$new()
+          infoGainFeatureCalculation <- InformationGainReduction$new()
+          clusterAnalysis <- ClusterFeaturesWithPreComputedFeature$new()
+          clusterAnalysis$setPrecomputedFeaturesProvider(infoGainFeatureCalculation$getCalculatedFeatures)
+          clusterAnalysis$setPrecomputedCorrelations(self$preCalulcatedFeatures["ClusterFeaturesWithPreComputedFeature"][[1]])
+          
+          sortFeaturesWithPreComputedFeature <- SortFeaturesWithPreComputedFeature$new()
+          sortFeaturesWithPreComputedFeature$setPrecomputedFeaturesProvider(infoGainFeatureCalculation$getCalculatedFeatures)
+          
+          featReductionContainer <- FeatureReductionContainer$new(outcomeTrainSet, radiomicFeaturesTrainSets[[1]])
+          featReductionContainer$addRule(normalizer, "NormalizeFeaturesrule")
+          featReductionContainer$addRule(keepFeaturesNoVolumeCorrelation, "RemoveFeaturesThatCorrelateWithVolume")
+          featReductionContainer$addRule(univariateFeatureReduction,"UnivariateFeatureReductionRulePolyGlm")
+          featReductionContainer$addRule(infoGainFeatureCalculation,"InformationGainReduction")
+          featReductionContainer$addRule(clusterAnalysis, "ClusterFeaturesWithPreComputedFeature")
+          featReductionContainer$addRule(sortFeaturesWithPreComputedFeature, "SortFeaturesWithPreComputedFeature")
+          return(featReductionContainer)
+        },
         radiomicsFeatureEliminationRules = function(outcomeTrainSet, radiomicFeaturesTrainSets) {
           ## define Rules to apply
           centerAgnosticRule <- CenterAgnosticFeatures$new(0.001)# disabled because all features fulfill this rule

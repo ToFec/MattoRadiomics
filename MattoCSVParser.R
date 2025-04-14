@@ -9,7 +9,7 @@ source("Outcome.R")
 
 MattoCSVParserProgression <- R6Class("MattoCSVParserProgression", 
 		public = list(
-        inputDataCSV = '/media/fechter/DATA/Bilder/MATTO/RadiomicsAnalysis/radiomicFeaturesCombined.csv',        
+        inputDataCSV = '/media/fechter/DATA/Bilder/MATTO/RadiomicsAnalysis/radiomicFeaturesCombinedQSqrtWavelet.csv',        
 				
 				getRadiomicFeatures = function(inputData) {
           features <- inputData[,-(1:9)]
