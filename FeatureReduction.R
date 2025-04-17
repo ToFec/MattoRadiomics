@@ -9,7 +9,7 @@ library(survival)
 library(dplyr)
 library(caret)
 library(CORElearn)
-
+library(glmnet)
 
 FeatureReductionContainer <- R6Class("FeatureReductionContainer",
     public = list(
@@ -238,21 +238,14 @@ GeneralUnivariateFeatureReductionRule <- R6Class("UnivariateFeatureReductionRule
           self$adjustP <- adjustP
         },
         apply = function(outcome, data, innerCode) {
+          print(paste("before univariate filtering:",length(data)))
           featuresToTake <- rep(100, ncol(data))
           
           for (featIdx in seq_len(ncol(data))) {
             hasZeroVariance <- nearZeroVar(data[, featIdx], saveMetrics = TRUE)
             if (!hasZeroVariance$zeroVar && !hasZeroVariance$nzv) {
               
-              pValue <- tryCatch(
-                  {
-                    model <- glm(outcome$status ~ data[, featIdx], family = binomial())
-                    modelSummaryCoefs <- coef(summary(model))
-                    modelSummaryCoefs[2, 4]
-                  },
-                  error=function(e) {
-                    return(1.0)
-                  })  
+              pValue <- innerCode(outcome, data, featIdx)  
               featuresToTake[featIdx] <- pValue
             }
           }
@@ -291,7 +284,7 @@ GeneralUnivariateFeatureReductionRule <- R6Class("UnivariateFeatureReductionRule
 UnivariateFeatureReductionRuleGlm <- R6Class("UnivariateFeatureReductionRuleGlm",
     inherit = GeneralUnivariateFeatureReductionRule,
     public = list(
-        innerLoopLogic = function(outcome, data) {
+        innerLoopLogic = function(outcome, data, featIdx) {
           pValue <- tryCatch(
               {
                 model <- glm(outcome$status ~ data[, featIdx], family = binomial())
@@ -313,12 +306,19 @@ UnivariateFeatureReductionRuleGlm <- R6Class("UnivariateFeatureReductionRuleGlm"
 UnivariateFeatureReductionRulePolyGlm <- R6Class("UnivariateFeatureReductionRulePolyGlm",
     inherit = GeneralUnivariateFeatureReductionRule,
     public = list(
-        innerLoopLogic = function(outcome, data) {
+        innerLoopLogic = function(outcome, data, featIdx) {
           pValue <- tryCatch(
               {
-                model <- glm(outcome$status ~ poly(data[, featIdx],3), family = binomial())
-                modelSummaryCoefs <- coef(summary(model))
-                min(modelSummaryCoefs[2:4, 4])
+                minPValue = 1.0
+                for (degree in 1:3)
+                {
+                  model <- glm(outcome$status ~ I(data[, featIdx]^degree), family = binomial())
+                  modelSummaryCoefs <- coef(summary(model))
+                  if ( minPValue > modelSummaryCoefs[2, 4]) {
+                    minPValue <- modelSummaryCoefs[2, 4]
+                  }
+                }
+                return(minPValue)
               },
               error=function(e) {
                 return(1.0)
@@ -335,7 +335,7 @@ UnivariateFeatureReductionRulePolyGlm <- R6Class("UnivariateFeatureReductionRule
 UnivariateFeatureReductionRulePolyLM <- R6Class("UnivariateFeatureReductionRulePolyLM",
     inherit = GeneralUnivariateFeatureReductionRule,
     public = list(
-        innerLoopLogic = function(outcome, data) {
+        innerLoopLogic = function(outcome, data, featIdx) {
           pValue <- tryCatch(
               {
                 model <- lm(outcome$time ~ poly(data[, featIdx],3))
@@ -357,7 +357,7 @@ UnivariateFeatureReductionRulePolyLM <- R6Class("UnivariateFeatureReductionRuleP
 UnivariateFeatureReductionRuleLM <- R6Class("UnivariateFeatureReductionRuleLM",
     inherit = GeneralUnivariateFeatureReductionRule,
     public = list(
-        innerLoopLogic = function(outcome, data) {
+        innerLoopLogic = function(outcome, data, featIdx) {
           pValue <- tryCatch(
               {
                 model <- lm(outcome$time ~ data[, featIdx])
@@ -679,6 +679,7 @@ RemoveFeaturesThatCorrelateWithVolume <- R6Class("RemoveFeaturesThatCorrelateWit
           return(newData[private$featureNames])
         },
         apply = function(outcome, data) {
+          print(paste("before volume correlation analysis:",length(data)))
           volumeColNumber <- which(colnames(data) == private$volumeColName)
           volumes <- data[,volumeColNumber,drop=FALSE]
           otherFeatures <- data[,-volumeColNumber,drop=FALSE]
@@ -688,6 +689,40 @@ RemoveFeaturesThatCorrelateWithVolume <- R6Class("RemoveFeaturesThatCorrelateWit
           remainingFeatures <- otherFeatures[,rhos < 0.8]
           
           private$featureNames <- c(colnames(volumes), colnames(remainingFeatures))
+          print(paste("after volume correlation analysis:",length(data)))
+          return(data[private$featureNames])
+          
+        }
+    ),
+    private = list(
+        volumeColName = NULL,
+        featureNames = NULL
+    )
+)
+
+LassoFeatureReduction <- R6Class("LassoFeatureReduction",
+    inherit = FeatureReductionRule,
+    public = list(
+        applyToTestSet = function(outcome, newData) {
+          return(newData[private$featureNames])
+        },
+        apply = function(outcome, data) {
+          print(paste("before lasso regressioin analysis:",length(data)))
+          
+          x <- data.matrix(data)
+          y <- outcome$status
+          
+          cv.lasso <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+          
+          model <- glmnet(x, y, alpha = 1, family = "binomial", lambda = cv.lasso$lambda.min)
+          modelCoefficient <- coef(model, cv.lasso$lambda.min)
+          print(model)
+          #[-1] is the intercept
+          modelCoefficientValuesNotZero <- as.vector(modelCoefficient)[-1] != 0
+          featureNames <- rownames(modelCoefficient)[-1]
+          private$featureNames <- featureNames[modelCoefficientValuesNotZero]
+          
+          print(paste("after lasso regressioin analysis:",length(private$featureNames)))
           
           return(data[private$featureNames])
           

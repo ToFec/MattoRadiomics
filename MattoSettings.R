@@ -9,7 +9,7 @@ library(R6)
 MattoSettingsGlm <- R6Class("MattoSettingsGlm", 
     public = list(
       outerStartFold = 1,
-      outerEndFold = 30,
+      outerEndFold = 1,
       innerStartFold = 1,
       innerEndFold = 1,
       maxFeaturesInmodel = 8,#with eight features and no outer loop and a train/test split of 80/20, we have around 15 samples per feature
@@ -25,7 +25,10 @@ MattoSettingsGlm <- R6Class("MattoSettingsGlm",
       # with a polynomial model alll degrees <= the given degree are part of the model and if one is not significant the model would get rejected
       volumeColName = "original_shape_MeshVolume",
       featureReductionContainerProvider = NULL,
+      preProcessors = list(),
       initialize = function(csvParser = NULL) {
+        
+        private$setCsvParserPreProcessors(csvParser)
         
         self$baseModel <- Model$new()
         ## self$baseModel$setEvaluationFunction("AUC")
@@ -76,6 +79,32 @@ MattoSettingsGlm <- R6Class("MattoSettingsGlm",
         }
     ),
     private = list(
+        setCsvParserPreProcessors = function(csvParser) {
+          for (preProcessor in self$preProcessors) {
+            csvParser$addPreprocessor(preProcessor)
+          }
+        }
+    )
+)
+
+MattoSettingsGlmPolyData <- R6Class(
+    "MattoSettingsGlmPolyData",
+    inherit = MattoSettingsGlm,
+    public = list(
+        polynomialDegree = 3,
+        initialize = function(csvParser = NULL) {
+          self$outerEndFold = 1
+          self$innerEndFold = 1
+          self$maxFeaturesInmodel = 100
+          self$featureDeterminationMethod = "takeNFeatures"
+          self$preProcessors = list(PolynomialPreprocessor$new(self$polynomialDegree))
+          
+          super$initialize(csvParser)
+          
+          self$featureReductionContainerProvider <- FeatureReductionContainerProvider$new()
+          self$featureReductionContainerProvider$volumeColName <- self$volumeColName
+          self$featureSetsAndReductionRules = list("radiomics" = self$featureReductionContainerProvider$radiomicsFeatureEliminationRulesMattoPolyLM)
+        }
     )
 )
 
@@ -84,6 +113,8 @@ MattoSettingsPolyGLM <- R6Class(
     inherit = MattoSettingsGlm,
     public = list(
         initialize = function(csvParser = NULL) {
+          self$outerEndFold = 1
+          self$innerEndFold = 1
           super$initialize(csvParser)
           self$modelParamPThreshold = 1.0 # for polynomial model set this to 1.0 (all models pass). the algo checks each model param and if one param is above threshold the model gets rejected.
           # with a polynomial model alll degrees <= the given degree are part of the model and if one is not significant the model would get rejected

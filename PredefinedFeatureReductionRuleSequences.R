@@ -17,16 +17,18 @@ FeatureReductionContainerProvider <- R6Class("FeatureReductionContainerProvider"
           normalizer <- NormalizeFeaturesrule$new()
           keepFeaturesNoVolumeCorrelation <- RemoveFeaturesThatCorrelateWithVolume$new()
           keepFeaturesNoVolumeCorrelation$setVolumeColName(self$volumeColName)
-          univariateFeatureReduction <- UnivariateFeatureReductionRulePolyLM$new()
+          univariateFeatureReduction <- UnivariateFeatureReductionRuleGlm$new(pValueThreshold = 1.0)
           clusterAnalysis <- ClusterFeaturesWithPreComputedFeature$new()
           clusterAnalysis$setPrecomputedFeaturesProvider(univariateFeatureReduction$getCalculatedFeatures)
           clusterAnalysis$setPrecomputedCorrelations(self$preCalulcatedFeatures["ClusterFeaturesWithPreComputedFeature"][[1]])
+          lassoRegressionAnalysis <- LassoFeatureReduction$new()
           
           featReductionContainer <- FeatureReductionContainer$new(outcomeTrainSet, radiomicFeaturesTrainSets[[1]])
           featReductionContainer$addRule(normalizer, "NormalizeFeaturesrule")
           featReductionContainer$addRule(keepFeaturesNoVolumeCorrelation, "RemoveFeaturesThatCorrelateWithVolume")
           featReductionContainer$addRule(univariateFeatureReduction,"UnivariateFeatureReductionRulePolyLM")
           featReductionContainer$addRule(clusterAnalysis, "ClusterFeaturesWithPreComputedFeature")
+          featReductionContainer$addRule(lassoRegressionAnalysis, "LassoFeatureReduction")
           
           return(featReductionContainer)
           
@@ -103,6 +105,7 @@ FeatureReductionContainerProvider <- R6Class("FeatureReductionContainerProvider"
           keepFeaturesNoVolumeCorrelation <- RemoveFeaturesThatCorrelateWithVolume$new()
           keepFeaturesNoVolumeCorrelation$setVolumeColName(self$volumeColName)
           univariateFeatureReduction <- UnivariateFeatureReductionRulePolyGlm$new()
+          #univariateFeatureReduction <- UnivariateFeatureReductionRuleGlm$new()
           infoGainFeatureCalculation <- InformationGainReduction$new()
           clusterAnalysis <- ClusterFeaturesWithPreComputedFeature$new()
           clusterAnalysis$setPrecomputedFeaturesProvider(infoGainFeatureCalculation$getCalculatedFeatures)

@@ -23,6 +23,15 @@ DataSplitter <- R6Class("DataSplitter",
           testIdxs <- which(outcome$center != trainCenterIdx)
           return(list("testIdxs" = testIdxs, "trainIdxs" = trainIdxs))
         },
+        getEqualNumberEventsNonEvents = function(outcome, idxs) {
+          nuOfEvents <- sum(outcome$status[idxs])
+          nuOfNonEvents <- sum(outcome$status[idxs] == 0)
+          samplesPerClass <- min(nuOfEvents, nuOfNonEvents)
+          trainIdxs0 <- sample(idxs[outcome$status[idxs] == 0], samplesPerClass)
+          trainIdxs1 <- sample(idxs[outcome$status[idxs] == 1], samplesPerClass)
+          
+          idxs <- c(trainIdxs0, trainIdxs1)
+        },
         getIndexForTrainTestSetConsideringPatIdsUnderSample = function(outcome) {
           uniqueNamesWithEvents <- aggregate(outcome$status, list(outcome$ids), sum)
           colnames(uniqueNamesWithEvents) <- c("Ids", "Events")
@@ -52,13 +61,8 @@ DataSplitter <- R6Class("DataSplitter",
           trainIdxs <- c(idxs0, idxs1)
           testIdxs <- seq_len(length(outcome$ids))[trainIdxs*-1]
           
-          nuOfEvents <- sum(outcome$status[trainIdxs])
-          nuOfNonEvents <- sum(outcome$status[trainIdxs] == 0)
-          samplesPerClass <- min(nuOfEvents, nuOfNonEvents)
-          trainIdxs0 <- sample(trainIdxs[outcome$status[trainIdxs] == 0], samplesPerClass)
-          trainIdxs1 <- sample(trainIdxs[outcome$status[trainIdxs] == 1], samplesPerClass)
-          
-          trainIdxs <- c(trainIdxs0, trainIdxs1)
+          trainIdxs <- self$getEqualNumberEventsNonEvents(outcome, trainIdxs)
+          testIdxs <- self$getEqualNumberEventsNonEvents(outcome, testIdxs)
           
           return(list("testIdxs" = testIdxs, "trainIdxs" = trainIdxs))
         },

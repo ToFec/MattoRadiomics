@@ -9,10 +9,11 @@ source("Outcome.R")
 
 MattoCSVParserProgression <- R6Class("MattoCSVParserProgression", 
 		public = list(
-        inputDataCSV = '/media/fechter/DATA/Bilder/MATTO/RadiomicsAnalysis/radiomicFeaturesCombinedQSqrtWavelet.csv',        
+        inputDataCSV = '/media/fechter/DATA/Bilder/MATTO/RadiomicsAnalysis/radiomicFeaturesCombinedQSqrtWavelet.csv',
 				
 				getRadiomicFeatures = function(inputData) {
           features <- inputData[,-(1:9)]
+          features <- private$applyPreprocessors(features)
 					return(features)
 				},
         getRadiomcFeaturesAsList = function(inputData) {
@@ -44,12 +45,16 @@ MattoCSVParserProgression <- R6Class("MattoCSVParserProgression",
 				},
 				readCSVFiles = function()
 				{
-					inputData <- read.csv(self$inputDataCSV)
-
-          private$nFeatures <- nrow(inputData)
-          
+          inputData <- private$readInputData()
 					list(inputData)
-				}
+				},
+        addPreprocessor = function(newPreprocessor) {
+          if (is.null(private$preProcessors)) {
+            private$preProcessors <- c(newPreprocessor)
+          } else {
+            private$preProcessors <- append(private$preProcessors, newPreprocessor)
+          }
+        }
 		),
 		private = list(
         getCenter = function(centers)
@@ -63,7 +68,19 @@ MattoCSVParserProgression <- R6Class("MattoCSVParserProgression",
           }
           return(centerIds)
         },
-        nFeatures = NULL
+        readInputData = function() {
+          inputData <- read.csv(self$inputDataCSV)
+          private$nFeatures <- nrow(inputData)
+          return(inputData)
+        },
+        applyPreprocessors = function(inputData) {
+          for (preProcessor in private$preProcessors) {
+            inputData <- preProcessor$apply(inputData)
+          }
+          return(inputData)
+        },
+        nFeatures = NULL,
+        preProcessors = NULL
 		)
 )
 
@@ -95,14 +112,14 @@ MattoCSVParserLocalDistant <- R6Class(
           centerIds <- private$getCenter(inputData$Study)
           
           outcome = Outcome$new(statusAll, idsAll, timeAll, centerIds)
-        },
-        readCSVFiles = function()
-        {
+        }
+    ),
+    private = list(
+        readInputData = function() {
           inputData <- read.csv(self$inputDataCSV)
           inputData <- inputData[!is.na(inputData$Local_Distant),]
           private$nFeatures <- nrow(inputData)
-          
-          list(inputData)
+          return(inputData)
         }
     )
 )
