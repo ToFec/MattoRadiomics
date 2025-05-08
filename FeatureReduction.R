@@ -576,7 +576,7 @@ ClusterFeatures <- R6Class("ClusterFeatures",
         self$clusterIdxs <- c(1)
       }
 
-      print("number of clusers: ")
+      print("number of clusters: ")
       print((max(self$clusterIdxs)))
 
       principalComponentData <- list()
@@ -640,7 +640,7 @@ ClusterFeaturesWithPreComputedFeature <- R6Class("ClusterFeaturesWithPreComputed
             self$clusterIdxs <- c(1)
           }
           
-          print(paste("number of clusers:",(max(self$clusterIdxs))))
+          print(paste("number of clusters:",(max(self$clusterIdxs))))
           private$featureNames <- c()
           preComptedFeatures <- private$preComptedFeatureProvider()
           principalComponentData <- list()
@@ -689,7 +689,7 @@ RemoveFeaturesThatCorrelateWithVolume <- R6Class("RemoveFeaturesThatCorrelateWit
           remainingFeatures <- otherFeatures[,rhos < 0.8]
           
           private$featureNames <- c(colnames(volumes), colnames(remainingFeatures))
-          print(paste("after volume correlation analysis:",length(data)))
+          print(paste("after volume correlation analysis:",length(data[private$featureNames])))
           return(data[private$featureNames])
           
         }
@@ -712,15 +712,32 @@ LassoFeatureReduction <- R6Class("LassoFeatureReduction",
           x <- data.matrix(data)
           y <- outcome$status
           
-          cv.lasso <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+          numberOfFeaturesBefore = ncol(x)
+          numberOfFeaturesAfter = -1
           
-          model <- glmnet(x, y, alpha = 1, family = "binomial", lambda = cv.lasso$lambda.min)
-          modelCoefficient <- coef(model, cv.lasso$lambda.min)
-          print(model)
-          #[-1] is the intercept
-          modelCoefficientValuesNotZero <- as.vector(modelCoefficient)[-1] != 0
-          featureNames <- rownames(modelCoefficient)[-1]
-          private$featureNames <- featureNames[modelCoefficientValuesNotZero]
+          iterationCounter = 1
+          while (numberOfFeaturesBefore != numberOfFeaturesAfter) {
+            
+            cv.lasso <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+            
+            model <- glmnet(x, y, alpha = 1, family = "binomial", lambda = cv.lasso$lambda.min)
+            modelCoefficient <- coef(model, cv.lasso$lambda.min)
+            #print(modelCoefficient)
+            #[-1] is the intercept
+            modelCoefficientValuesNotZero <- as.vector(modelCoefficient)[-1] != 0
+            featureNames <- rownames(modelCoefficient)[-1][modelCoefficientValuesNotZero]
+            
+            numberOfFeaturesAfter <- length(featureNames)
+            numberOfFeaturesBefore = ncol(x)
+            #print(paste("after lasso iteration ",iterationCounter,":",numberOfFeaturesAfter))
+            x <- data.matrix(x[,modelCoefficientValuesNotZero])
+            iterationCounter = iterationCounter + 1
+            if (numberOfFeaturesAfter < 2) {
+              break
+            }
+          }
+          
+          private$featureNames <- featureNames
           
           print(paste("after lasso regressioin analysis:",length(private$featureNames)))
           
@@ -770,6 +787,7 @@ InformationGainReduction <- R6Class("InformationGainReduction",
           self$threshold <- threshold
         },
         apply = function(outcome, data) {
+          print(paste("before info gain filtering:",length(data)))
           featuresToTake <- rep(100, ncol(data))
           
           for (featIdx in seq_len(ncol(data))) {

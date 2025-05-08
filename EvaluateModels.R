@@ -15,6 +15,8 @@ source("ModelSelectionInnerLoop.R")
 source("TrackVariables.R")
 source("MattoSettings.R")
 source("MattoCSVParser.R")
+source("Preprocessors.R")
+source("EvaluationFunctions.R")
 
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -88,12 +90,13 @@ message(paste("mean tesetaccuracy:", mean(testAccuracies), "+/-", sd(testAccurac
 message(toString(testAccuracies))
 dataSplitter <- settings$getDataSplitterOuterLoop()
 calculatedTestAccuracies <- c()
+figuresForModels <- c()
 for (i in seq_len(length(bestModels))) {
   message("############################")
   message("############################")
   message("############################")
   model <- bestModels[[i]]
-
+  evalFunctionCalculator <- getEvaluationFunctionObject(model)
   if (!is.null(testIdxs)) {
     testIdx <- testIdxs[[i]]
     trainIdx <- trainIdxs[[i]]
@@ -105,6 +108,10 @@ for (i in seq_len(length(bestModels))) {
     message(paste("Fold", i, "eventRatio in train set", sum(outcomeSubsets$trainSet$status) / length(outcomeSubsets$trainSet$status)))
     message(paste("Fold", i, "eventRatio in test set", sum(outcomeSubsets$testSet$status) / length(outcomeSubsets$testSet$status)))
     idsInSubset <- outcomeSubsets$testSet$ids[outcomeSubsets$testSet$status == 1]
+    message(paste("Size of train set: ", length(outcomeSubsets$trainSet$ids)))
+    message(paste("Ids in train set: ", toString(outcomeSubsets$trainSet$ids)))
+    message(paste("Size of test set: ", length(outcomeSubsets$testSet$ids)))
+    message(paste("Ids in test set: ", toString(outcomeSubsets$testSet$ids)))
     message(paste("Ids with event in test set: ", toString(idsInSubset)))
     
     
@@ -121,7 +128,13 @@ for (i in seq_len(length(bestModels))) {
     #model$setEvaluationFunction("AUC")
     trainAccuracy <- model$evaluateModelOnNewData(outcomeSubsets$trainSet, trainSets)
     testAccuracy <- model$evaluateModelOnNewData(outcomeSubsets$testSet, testSets)
+    
     predictions <- model$modelPredictionOnNewData(outcomeSubsets$testSet, testSets)
+    
+    evalFunctionCalculator$setOutcome(outcomeSubsets$testSet)
+    evalFunctionCalculator$setPrediction(predictions)
+
+    
   } else {
     trainAccuracy <- model$evaluateModelOnNewData(outcome, featureSets)
     testAccuracy <- 0.0
@@ -147,6 +160,9 @@ for (i in seq_len(length(bestModels))) {
     }
   }
 
+  evalFunctionCalculator$calculateFigures()
+  figuresForModel <- evalFunctionCalculator$getFigures()
+  figuresForModels[[length(figuresForModels) + 1]] <- figuresForModel
 
   message(paste("Train accuracy:", trainAccuracy))
   message(paste("Test accuracy:", testAccuracy))
@@ -159,7 +175,17 @@ message("############################")
 message("############################")
 message("############################")
 message(paste("mean calculated tesetaccuracy:", mean(calculatedTestAccuracies), "+/-", sd(calculatedTestAccuracies)))
-message(toString(calculatedTestAccuracies))
+message(paste("values: ", toString(calculatedTestAccuracies)))
+
+if (length(figuresForModels) > 0) {
+  figureNames <- names(figuresForModels[[1]])
+  for (figureName in figureNames) {
+    figureValues <- unlist(lapply(figuresForModels, function(x) x[[figureName]]))
+    message("############################")
+    message(paste("mean", figureName, ":", mean(figureValues), "+/-", sd(figureValues)))
+    message(paste("values: ", toString(figureValues)))
+  }
+}
 
 sink(file = NULL, type = "m")
 sink(file = NULL, type = "o")

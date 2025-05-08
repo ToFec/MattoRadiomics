@@ -51,7 +51,7 @@ ModelTrainer <- R6Class("ModelTrainer",
     featureDeterminationMethod = NULL,
     takeNFeatures = function(perFormanceToBeat, dataFrameForModelFitting) {
       featureToTake <- ""
-      for (i in seq_len(private$maxFeaturesInmodel)) {
+      for (i in seq_len(min(length(colnames(private$trainingData)),private$maxFeaturesInmodel))) {
         featureName <- colnames(private$trainingData)[i]
         private$model$addFieldToFormula(featureName)
         successfullyTrained <- tryCatch(

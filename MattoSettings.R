@@ -48,6 +48,7 @@ MattoSettingsGlm <- R6Class("MattoSettingsGlm",
       },
       getDataSplitterInnerLoop = function() {
         dataSplitter <- DataSplitter$new()
+        #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSet)
         #dataSplitter$setSampleFunction(dataSplitter$getIndexWithNoSampling)
         dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSetConsideringPatIdsUnderSample)
         #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSetConsideringPatIds)
@@ -55,6 +56,7 @@ MattoSettingsGlm <- R6Class("MattoSettingsGlm",
       },
       getDataSplitterOuterLoop = function() {
         dataSplitter <- DataSplitter$new()
+        #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSet)
         dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSetConsideringPatIdsUnderSample)
         #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSetConsideringPatIds)
         #dataSplitter$setSampleFunction(dataSplitter$splitByCenter)
@@ -93,8 +95,8 @@ MattoSettingsGlmPolyData <- R6Class(
     public = list(
         polynomialDegree = 3,
         initialize = function(csvParser = NULL) {
-          self$outerEndFold = 1
-          self$innerEndFold = 1
+          self$outerEndFold = 10
+          self$innerEndFold = 10
           self$maxFeaturesInmodel = 100
           self$featureDeterminationMethod = "takeNFeatures"
           self$preProcessors = list(PolynomialPreprocessor$new(self$polynomialDegree))

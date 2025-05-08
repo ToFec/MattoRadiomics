@@ -151,6 +151,8 @@ DataSplitter <- R6Class("DataSplitter",
         },
         sampleDataset = function(outcome) {
           testTrainIdxs <- self$sampleFunction(outcome)
+          print(paste("size train set:",length(testTrainIdxs$trainIdxs)))
+          print(paste("size test set:",length(testTrainIdxs$testIdxs))) 
           private$testIdxs <- testTrainIdxs$testIdxs
           private$trainIdxs <- testTrainIdxs$trainIdxs
           trainTestSetList <- self$getOutcomeSubsetWithCurrentIdx(outcome)

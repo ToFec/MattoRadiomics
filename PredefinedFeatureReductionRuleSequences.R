@@ -18,15 +18,24 @@ FeatureReductionContainerProvider <- R6Class("FeatureReductionContainerProvider"
           keepFeaturesNoVolumeCorrelation <- RemoveFeaturesThatCorrelateWithVolume$new()
           keepFeaturesNoVolumeCorrelation$setVolumeColName(self$volumeColName)
           univariateFeatureReduction <- UnivariateFeatureReductionRuleGlm$new(pValueThreshold = 1.0)
+          
+          infoGainFeatureCalculation <- InformationGainReduction$new()
+          
           clusterAnalysis <- ClusterFeaturesWithPreComputedFeature$new()
-          clusterAnalysis$setPrecomputedFeaturesProvider(univariateFeatureReduction$getCalculatedFeatures)
+          
+          ## clusterAnalysis$setPrecomputedFeaturesProvider(univariateFeatureReduction$getCalculatedFeatures)
+          clusterAnalysis$setPrecomputedFeaturesProvider(infoGainFeatureCalculation$getCalculatedFeatures)
           clusterAnalysis$setPrecomputedCorrelations(self$preCalulcatedFeatures["ClusterFeaturesWithPreComputedFeature"][[1]])
+          
+          
+          
           lassoRegressionAnalysis <- LassoFeatureReduction$new()
           
           featReductionContainer <- FeatureReductionContainer$new(outcomeTrainSet, radiomicFeaturesTrainSets[[1]])
           featReductionContainer$addRule(normalizer, "NormalizeFeaturesrule")
-          featReductionContainer$addRule(keepFeaturesNoVolumeCorrelation, "RemoveFeaturesThatCorrelateWithVolume")
-          featReductionContainer$addRule(univariateFeatureReduction,"UnivariateFeatureReductionRulePolyLM")
+          #featReductionContainer$addRule(keepFeaturesNoVolumeCorrelation, "RemoveFeaturesThatCorrelateWithVolume")
+          #featReductionContainer$addRule(univariateFeatureReduction,"UnivariateFeatureReductionRulePolyLM")
+          featReductionContainer$addRule(infoGainFeatureCalculation,"InformationGainReduction")
           featReductionContainer$addRule(clusterAnalysis, "ClusterFeaturesWithPreComputedFeature")
           featReductionContainer$addRule(lassoRegressionAnalysis, "LassoFeatureReduction")
           

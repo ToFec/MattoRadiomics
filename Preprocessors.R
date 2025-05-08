@@ -14,7 +14,7 @@ PolynomialPreprocessor <- R6Class(
           polyCols <- c()
           num_cols <- features[sapply(features, is.numeric)]
           for (degree in seq(2,private$degree)) {
-            polyCols <- append(polyCols, setNames(num_cols^degree, paste0(names(num_cols), "^",degree)))
+            polyCols <- append(polyCols, setNames(num_cols^degree, paste0(names(num_cols), "_",degree)))
           }
           result <- cbind(features, polyCols)
           return(result)

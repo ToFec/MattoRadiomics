@@ -295,6 +295,7 @@ CoxEnsembleModel <- R6Class(
       return(featureSetUnion)
     },
     printModelSummary = function() {
+      print(paste("Ensemble with ", length(private$models), "models"))
       for (model in private$models)
       {
         model$printModelSummary()
@@ -401,6 +402,7 @@ GlmEnsembleModel <- R6Class(
           return(featureSetUnion)
         },
         printModelSummary = function() {
+          print(paste("Ensemble with ", length(private$models), "models"))
           for (model in private$models)
           {
             model$printModelSummary()
