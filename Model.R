@@ -6,6 +6,7 @@
 
 library(R6)
 library(pROC)
+library(randomForest)
 
 GenericModel <- R6Class(
   "GenericModel",
@@ -445,6 +446,21 @@ LEnsembleModel <- R6Class(
             rmse <- sqrt(mean((outcome$time - predictions)^2))
           }
           return(rmse)
+        }
+    )
+)
+
+RandomForestModel <- R6Class(
+    "RandomForestModel",
+    inherit = Model,
+    public = list(
+        trainModel = function(trainData) {
+          private$model <- randomForest(as.formula(self$getFormulaString()), data = trainData)
+        },
+        printModelSummary = function() {
+          print(private$model)
+          importance_scores <- randomForest::importance(private$model)
+          print(importance_scores[order(importance_scores, decreasing=TRUE),, drop = FALSE])
         }
     )
 )

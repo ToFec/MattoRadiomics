@@ -96,16 +96,35 @@ MattoSettingsGlmPolyData <- R6Class(
         polynomialDegree = 3,
         initialize = function(csvParser = NULL) {
           self$outerEndFold = 10
-          self$innerEndFold = 10
+          self$innerEndFold = 1
           self$maxFeaturesInmodel = 100
           self$featureDeterminationMethod = "takeNFeatures"
           self$preProcessors = list(PolynomialPreprocessor$new(self$polynomialDegree))
           
           super$initialize(csvParser)
           
+          self$baseModel <- RandomForestModel$new()
+          
           self$featureReductionContainerProvider <- FeatureReductionContainerProvider$new()
           self$featureReductionContainerProvider$volumeColName <- self$volumeColName
           self$featureSetsAndReductionRules = list("radiomics" = self$featureReductionContainerProvider$radiomicsFeatureEliminationRulesMattoPolyLM)
+        },
+        getDataSplitterInnerLoop = function() {
+          dataSplitter <- DataSplitter$new()
+          #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSet)
+          dataSplitter$setSampleFunction(dataSplitter$getIndexWithNoSampling)
+          #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSetConsideringPatIdsUnderSample)
+          #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSetConsideringPatIds)
+          return(dataSplitter)
+        },
+        getDataSplitterOuterLoop = function() {
+          dataSplitter <- DataSplitter$new()
+          #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSet)
+          #dataSplitter$setSampleFunction(dataSplitter$getIndexWithNoSampling)
+          dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSetConsideringPatIdsUnderSample)
+          #dataSplitter$setSampleFunction(dataSplitter$getIndexForTrainTestSetConsideringPatIds)
+          #dataSplitter$setSampleFunction(dataSplitter$splitByCenter)
+          return(dataSplitter)
         }
     )
 )

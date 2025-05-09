@@ -10,6 +10,8 @@ library(dplyr)
 library(caret)
 library(CORElearn)
 library(glmnet)
+library(randomForest)
+library(FSelector)
 
 FeatureReductionContainer <- R6Class("FeatureReductionContainer",
     public = list(
@@ -754,6 +756,9 @@ LassoFeatureReduction <- R6Class("LassoFeatureReduction",
 SortFeaturesWithPreComputedFeature <- R6Class("SortFeaturesWithPreComputedFeature",
      inherit = FeatureReductionRule,
      public = list(
+       initialize = function(decreasing = FALSE) {
+         private$decreasing = decreasing
+       },
        setPrecomputedFeaturesProvider = function(featureFunction) {
          private$preComptedFeatureProvider <- featureFunction
        },
@@ -768,15 +773,107 @@ SortFeaturesWithPreComputedFeature <- R6Class("SortFeaturesWithPreComputedFeatur
          
          preComptedFeatures <- private$preComptedFeatureProvider()
          preComptedFeatures <- preComptedFeatures[colnames(data)]
-         private$featureOrder <- order(as.double(preComptedFeatures))
+         private$featureOrder <- order(as.double(preComptedFeatures), decreasing=private$decreasing)
          return(data[private$featureOrder])
          
        }
      ),
      private = list(
        preComptedFeatureProvider = NULL,
-       featureOrder = NULL
+       featureOrder = NULL,
+       decreasing = NULL
      )
+)
+
+ChiSquareParameterRanking <- R6Class("ChiSquareParameterRanking",
+    inherit = FeatureReductionRule,
+    public = list(
+        threshold = NULL,
+        initialize = function(threshold = 1.0) {
+          self$threshold <- threshold
+        },
+        apply = function(outcome, data) {
+          print(paste("before chi-square filtering:",length(data)))
+          
+          
+          
+          result <- as.data.frame(
+              lapply(data, function(col) {
+                    if (is.numeric(col)) {
+                      col < median(col, na.rm = TRUE)
+                    } else {
+                      col
+                    }
+                  })
+          )
+          
+          tmp <- cbind("status"= outcome$status, result)
+          
+          featuresToTake <- 1.0 - chi.squared(status ~ ., tmp)
+          
+          featuresToTake[is.na(featuresToTake)] <- 1.0
+          
+          data <- data[, featuresToTake < 1, drop = FALSE]
+          featuresToTake <- featuresToTake[featuresToTake < 1, drop = FALSE]
+          
+          data <- data[, featuresToTake < self$threshold, drop = FALSE]
+          private$calculatedFeatures <- data.frame(t(featuresToTake[featuresToTake < self$threshold]))
+          colnames(private$calculatedFeatures) <- colnames(data)
+          private$namesOfColsToKeep <- colnames(data)
+          print(paste("after chi-square filtering:",length(data)))
+          return(data)
+        },
+        applyToTestSet = function(outcome, newData) {
+          return(newData[private$namesOfColsToKeep])
+        },
+        getCalculatedFeatures = function() {
+          return(private$calculatedFeatures)
+        }
+    ),
+    private = list(
+        namesOfColsToKeep = NULL,
+        calculatedFeatures = NULL
+    )
+)
+
+RandomForestParameterRanking <- R6Class("RandomForestParameterRanking",
+    inherit = FeatureReductionRule,
+    public = list(
+        threshold = NULL,
+        initialize = function(threshold = 1.0) {
+          self$threshold <- threshold
+        },
+        apply = function(outcome, data) {
+          print(paste("before random forest filtering:",length(data)))
+          
+          tmp <- cbind("status"= outcome$status, data)
+          rf_model <- randomForest(status ~ ., data = tmp, importance = TRUE)
+          importance_scores <- randomForest::importance(rf_model)
+          featuresToTake <- 1.0 - importance_scores[,2]
+          
+          featuresToTake[is.na(featuresToTake)] <- 1.0
+          
+          data <- data[, featuresToTake < 1, drop = FALSE]
+          featuresToTake <- featuresToTake[featuresToTake < 1, drop = FALSE]
+          
+          data <- data[, featuresToTake < self$threshold, drop = FALSE]
+          private$calculatedFeatures <- data.frame(t(featuresToTake[featuresToTake < self$threshold]))
+          colnames(private$calculatedFeatures) <- colnames(data)
+          private$namesOfColsToKeep <- colnames(data)
+          print(paste("after random forest filtering:",length(data)))
+          return(data)
+        },
+        applyToTestSet = function(outcome, newData) {
+          return(newData[private$namesOfColsToKeep])
+        },
+        getCalculatedFeatures = function() {
+          return(private$calculatedFeatures)
+        }
+    ),
+    private = list(
+        namesOfColsToKeep = NULL,
+        calculatedFeatures = NULL
+    )
 )
 
 InformationGainReduction <- R6Class("InformationGainReduction",

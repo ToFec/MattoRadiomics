@@ -19,12 +19,19 @@ FeatureReductionContainerProvider <- R6Class("FeatureReductionContainerProvider"
           keepFeaturesNoVolumeCorrelation$setVolumeColName(self$volumeColName)
           univariateFeatureReduction <- UnivariateFeatureReductionRuleGlm$new(pValueThreshold = 1.0)
           
-          infoGainFeatureCalculation <- InformationGainReduction$new()
+          parameterRanking <- RandomForestParameterRanking$new()
+          ## parameterRanking <- ChiSquareParameterRanking$new()
+          ## parameterRanking <- InformationGainReduction$new()
           
           clusterAnalysis <- ClusterFeaturesWithPreComputedFeature$new()
           
+          sortFeaturesWithPreComputedFeature <- SortFeaturesWithPreComputedFeature$new()
+          sortFeaturesWithPreComputedFeature$setPrecomputedFeaturesProvider(parameterRanking$getCalculatedFeatures)
+          
           ## clusterAnalysis$setPrecomputedFeaturesProvider(univariateFeatureReduction$getCalculatedFeatures)
-          clusterAnalysis$setPrecomputedFeaturesProvider(infoGainFeatureCalculation$getCalculatedFeatures)
+          clusterAnalysis$setPrecomputedFeaturesProvider(parameterRanking$getCalculatedFeatures)
+          #clusterAnalysis$setPrecomputedFeaturesProvider(infoGainFeatureCalculation$getCalculatedFeatures)
+          
           clusterAnalysis$setPrecomputedCorrelations(self$preCalulcatedFeatures["ClusterFeaturesWithPreComputedFeature"][[1]])
           
           
@@ -35,9 +42,11 @@ FeatureReductionContainerProvider <- R6Class("FeatureReductionContainerProvider"
           featReductionContainer$addRule(normalizer, "NormalizeFeaturesrule")
           #featReductionContainer$addRule(keepFeaturesNoVolumeCorrelation, "RemoveFeaturesThatCorrelateWithVolume")
           #featReductionContainer$addRule(univariateFeatureReduction,"UnivariateFeatureReductionRulePolyLM")
-          featReductionContainer$addRule(infoGainFeatureCalculation,"InformationGainReduction")
+          featReductionContainer$addRule(parameterRanking,"RandomForestParameterRanking")
+          #featReductionContainer$addRule(infoGainFeatureCalculation,"InformationGainReduction")
           featReductionContainer$addRule(clusterAnalysis, "ClusterFeaturesWithPreComputedFeature")
-          featReductionContainer$addRule(lassoRegressionAnalysis, "LassoFeatureReduction")
+          #featReductionContainer$addRule(lassoRegressionAnalysis, "LassoFeatureReduction")
+          featReductionContainer$addRule(sortFeaturesWithPreComputedFeature, "SortFeaturesWithPreComputedFeature")
           
           return(featReductionContainer)
           
