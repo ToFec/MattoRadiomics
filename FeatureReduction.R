@@ -848,9 +848,8 @@ RandomForestParameterRanking <- R6Class("RandomForestParameterRanking",
           
           tmp <- cbind("status"= outcome$status, data)
           rf_model <- randomForest(status ~ ., data = tmp, importance = TRUE)
-          importance_scores <- randomForest::importance(rf_model)
-          featuresToTake <- 1.0 - importance_scores[,2]
-          
+          importance_scores <- randomForest::importance(rf_model, type = 2)
+          featuresToTake <- 1 - (importance_scores / max(importance_scores))
           featuresToTake[is.na(featuresToTake)] <- 1.0
           
           data <- data[, featuresToTake < 1, drop = FALSE]

@@ -455,11 +455,11 @@ RandomForestModel <- R6Class(
     inherit = Model,
     public = list(
         trainModel = function(trainData) {
-          private$model <- randomForest(as.formula(self$getFormulaString()), data = trainData)
+          private$model <- randomForest(as.formula(self$getFormulaString()), data = trainData, importance = TRUE)
         },
         printModelSummary = function() {
           print(private$model)
-          importance_scores <- randomForest::importance(private$model)
+          importance_scores <- randomForest::importance(private$model, type = 2)
           print(importance_scores[order(importance_scores, decreasing=TRUE),, drop = FALSE])
         }
     )
